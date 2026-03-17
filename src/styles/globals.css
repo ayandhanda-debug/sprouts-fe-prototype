@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-main: #1c64f2;
+  --primary-dark: #0e2933;
+  --primary-light: #3e545c;
+  --text-primary: #191918;
+  --text-heading: #111928;
+  --text-secondary: #464544;
+  --text-muted: #706f69;
+  --bg-white: #ffffff;
+  --bg-light: #fbfafd;
+  --bg-gray: #f9fafb;
+  --border-default: #e7e7e6;
+  --border-light: #d4d4d4;
+}
+
+body {
+  font-family: 'Hanken Grotesk', 'Inter', sans-serif;
+  background-color: var(--bg-gray);
+  color: var(--text-primary);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
