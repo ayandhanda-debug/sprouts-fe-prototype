@@ -11,13 +11,11 @@ import {
   MessageSquareText,
   Plus,
   RefreshCcw,
-  ShieldAlert,
   Sparkles,
   Trash2,
   Upload,
   UsersRound,
   X,
-  Pencil,
   MoreHorizontal,
 } from 'lucide-react';
 
@@ -436,7 +434,7 @@ export default function SettingsMessagingPage() {
   };
 
   const handleRepositoryAction = (
-    action: 'edit' | 're-crawl' | 're-index' | 'disable' | 'delete',
+    action: 're-crawl' | 'delete',
     rowId: string
   ) => {
     setOpenMenuRowId(null);
@@ -446,25 +444,7 @@ export default function SettingsMessagingPage() {
       return;
     }
 
-    if (action === 'disable') {
-      setRepositoryItems((prev) =>
-        prev.map((item) => (item.id === rowId ? { ...item, status: 'disabled' } : item))
-      );
-      return;
-    }
-
-    if (action === 'edit') {
-      setRepositoryItems((prev) =>
-        prev.map((item) =>
-          item.id === rowId && !item.title.endsWith(' (Edited)')
-            ? { ...item, title: `${item.title} (Edited)` }
-            : item
-        )
-      );
-      return;
-    }
-
-    if (action === 're-crawl' || action === 're-index') {
+    if (action === 're-crawl') {
       const today = getTodayLabel();
       setRepositoryItems((prev) =>
         prev.map((item) =>
@@ -666,10 +646,7 @@ export default function SettingsMessagingPage() {
                             className="absolute right-3 top-12 z-10 w-44 rounded-xl border shadow-md p-1.5"
                             style={{ borderColor: '#dce0e4', backgroundColor: '#ffffff' }}
                           >
-                            <ActionButton label="Edit" icon={<Pencil size={15} />} onClick={() => handleRepositoryAction('edit', item.id)} />
                             <ActionButton label="Re-crawl" icon={<RefreshCcw size={15} />} onClick={() => handleRepositoryAction('re-crawl', item.id)} />
-                            <ActionButton label="Re-index" icon={<Database size={15} />} onClick={() => handleRepositoryAction('re-index', item.id)} />
-                            <ActionButton label="Disable" icon={<ShieldAlert size={15} />} onClick={() => handleRepositoryAction('disable', item.id)} />
                             <ActionButton
                               label="Delete"
                               icon={<Trash2 size={15} />}
