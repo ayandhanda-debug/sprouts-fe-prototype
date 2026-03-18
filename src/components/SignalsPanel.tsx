@@ -911,12 +911,20 @@ export default function SignalsPanel({
                       {signal.status === 'completed' ? (
                         <div className="flex items-center gap-1.5 text-green-600">
                           <Check size={13} />
-                          <span className="font-medium">Enriched {signal.enrichedRows.toLocaleString()} rows</span>
+                          <span className="font-medium">
+                            Enriched {signal.enrichedRows.toLocaleString()} of {signal.totalRows.toLocaleString()} accounts
+                          </span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-gray-500">
                           <Loader2 size={12} className="animate-spin text-blue-500" />
-                          <span>Enriching <span className="font-semibold text-gray-700">{signal.enrichedRows.toLocaleString()}/{signal.totalRows.toLocaleString()}</span> rows</span>
+                          <span>
+                            Enriched{' '}
+                            <span className="font-semibold text-gray-700">
+                              {signal.enrichedRows.toLocaleString()} of {signal.totalRows.toLocaleString()}
+                            </span>{' '}
+                            accounts
+                          </span>
                           <ExternalLink size={11} className="text-gray-300 ml-0.5" />
                         </div>
                       )}

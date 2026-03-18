@@ -126,7 +126,7 @@ Best,
         wordCount: 106,
         reasoning: {
           status: 'available',
-          appliesTo: 'Second Follow Up',
+          appliesTo: 'Follow-up 2',
           summary:
             'This message uses a light-touch re-engagement style by sharing a relevant resource instead of repeating the same ask. It keeps pressure low while preserving relevance to distributed AI workloads and Microsoft initiatives.',
         },
@@ -159,9 +159,27 @@ Best regards,
         wordCount: 127,
         reasoning: {
           status: 'available',
-          appliesTo: 'Post Connection',
+          appliesTo: 'LinkedIn Follow-up 1',
           summary:
             "The post-connection note opens with gratitude, then builds relevance around Sarah's cloud-and-AI focus before asking for a brief conversation. This sequencing helps the ask feel contextual rather than transactional.",
+        },
+      },
+      {
+        type: 'linkedinFollowUp',
+        body: `Hi Sarah,
+
+Sharing one quick follow-up in case useful: we recently helped a global enterprise team cut cloud operating spend while improving service reliability for AI-heavy workloads.
+
+If it helps, I can send a short 1-page summary with the exact framework and metrics.
+
+Best,
+[Your Name]`,
+        wordCount: 73,
+        reasoning: {
+          status: 'available',
+          appliesTo: 'LinkedIn Follow-up 2',
+          summary:
+            'This second LinkedIn touch keeps the message concise and value-led by offering a concrete artifact instead of forcing a meeting ask, which improves response probability.',
         },
       },
     ],
@@ -287,6 +305,18 @@ Best,
 [Your Name]`,
         wordCount: 105,
       },
+      {
+        type: 'linkedinFollowUp',
+        body: `Hi Michael,
+
+Quick follow-up in case it helps your team: we put together a brief playbook on reducing latency bottlenecks in real-time pipelines for autonomous systems.
+
+Happy to share it here if useful.
+
+Best,
+[Your Name]`,
+        wordCount: 61,
+      },
     ],
   },
   {
@@ -407,6 +437,18 @@ Looking forward to staying connected!
 Best,
 [Your Name]`,
         wordCount: 103,
+      },
+      {
+        type: 'linkedinFollowUp',
+        body: `Hi Emily,
+
+One final follow-up: we recently benchmarked content-delivery optimization patterns that improved QoE while reducing CDN overhead for a streaming platform.
+
+If useful, I can send the short benchmark summary.
+
+Best,
+[Your Name]`,
+        wordCount: 59,
       },
     ],
   },

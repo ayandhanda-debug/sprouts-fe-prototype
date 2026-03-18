@@ -1248,7 +1248,6 @@ export default function ContactsPage() {
         onClose={() => setShowCreditConfirmation(false)}
         onConfirm={handleCreditConfirm}
         selectedContactsCount={selectedContactsForMessage.size || 1}
-        totalCredits={5}
         availableCredits={3183}
       />
 

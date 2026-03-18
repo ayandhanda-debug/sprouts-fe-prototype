@@ -1,13 +1,12 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { Clock3, Linkedin, Mail, UserRound, X } from 'lucide-react';
 
 interface CreditConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   selectedContactsCount: number;
-  totalCredits: number;
   availableCredits: number;
 }
 
@@ -16,22 +15,21 @@ export default function CreditConfirmationModal({
   onClose,
   onConfirm,
   selectedContactsCount,
-  totalCredits,
   availableCredits,
 }: CreditConfirmationModalProps) {
   if (!isOpen) return null;
 
-  const creditsPerContact = 5;
-  const totalRequired = selectedContactsCount * creditsPerContact;
-  const usagePercentage = (totalRequired / availableCredits) * 100;
-
   const messageTypes = [
-    { name: 'Email', icon: '📧', credits: 1 },
-    { name: 'Follow-up', icon: '📧', credits: 1 },
-    { name: 'Second Follow-up', icon: '📧', credits: 1 },
-    { name: 'Connection Request', icon: '🔗', credits: 1 },
-    { name: 'Post Connection', icon: '🔗', credits: 1 },
+    { name: 'Email', channel: 'email' as const, credits: 1, step: 0 },
+    { name: 'Follow-up 1', channel: 'email' as const, credits: 1, step: 1 },
+    { name: 'Follow-up 2', channel: 'email' as const, credits: 1, step: 2 },
+    { name: 'LinkedIn Message', channel: 'linkedin' as const, credits: 1, step: 0 },
+    { name: 'LinkedIn Follow-up 1', channel: 'linkedin' as const, credits: 1, step: 1 },
+    { name: 'LinkedIn Follow-up 2', channel: 'linkedin' as const, credits: 1, step: 2 },
   ];
+  const creditsPerContact = messageTypes.reduce((sum, messageType) => sum + messageType.credits, 0);
+  const totalRequired = selectedContactsCount * creditsPerContact;
+  const usagePercentage = availableCredits > 0 ? (totalRequired / availableCredits) * 100 : 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -48,7 +46,10 @@ export default function CreditConfirmationModal({
               className="px-3 py-1 text-xs font-medium rounded-full"
               style={{ backgroundColor: '#f3f5f5', color: '#706f69' }}
             >
-              👤 {selectedContactsCount} Selected
+              <span className="inline-flex items-center gap-1.5">
+                <UserRound size={14} />
+                {selectedContactsCount} Selected
+              </span>
             </span>
             <button
               onClick={onClose}
@@ -92,7 +93,7 @@ export default function CreditConfirmationModal({
               {messageTypes.map((type, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between px-4 py-3 rounded-lg"
+                  className={`flex items-center justify-between px-4 py-3 rounded-lg ${type.step > 0 ? 'ml-5' : ''}`}
                   style={{ backgroundColor: '#f9fafb' }}
                 >
                   <div className="flex items-center gap-2">
@@ -103,17 +104,25 @@ export default function CreditConfirmationModal({
                       className="rounded"
                       style={{ accentColor: '#1c64f2' }}
                     />
+                    {type.step > 0 && (
+                      <span className="text-xs font-semibold" style={{ color: '#9aa4ad' }}>
+                        ↳
+                      </span>
+                    )}
                     <span className="text-sm font-medium" style={{ color: '#111928' }}>
                       {type.name}
                     </span>
-                    <span className="text-sm">{type.icon}</span>
                   </div>
-                  <div className="flex items-center gap-1" style={{ color: '#706f69' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 6v6l4 2" />
-                    </svg>
-                    <span className="text-sm font-medium">{type.credits}</span>
+                  <div className="flex items-center gap-3" style={{ color: '#706f69' }}>
+                    {type.channel === 'linkedin' ? (
+                      <Linkedin size={15} style={{ color: '#1c64f2' }} />
+                    ) : (
+                      <Mail size={15} style={{ color: '#1c64f2' }} />
+                    )}
+                    <div className="flex items-center gap-1">
+                      <Clock3 size={15} />
+                      <span className="text-sm font-medium">{type.credits}</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -133,10 +142,7 @@ export default function CreditConfirmationModal({
               Total Credits
             </span>
             <div className="flex items-center gap-1" style={{ color: '#111928' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
+              <Clock3 size={20} />
               <span className="text-lg font-bold">{creditsPerContact}</span>
             </div>
           </div>

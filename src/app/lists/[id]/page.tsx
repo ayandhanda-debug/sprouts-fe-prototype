@@ -231,6 +231,10 @@ export default function ListDetailPage() {
     setShowAIMessageModal(true);
   };
 
+  const handleViewReasoningClick = (contactId: string) => {
+    router.push(`/ai-messages/preview?contacts=${contactId}`);
+  };
+
   const handleSelectMethod = (method: 'smart' | 'custom') => {
     setShowAIMessageModal(false);
     if (method === 'smart') {
@@ -425,6 +429,9 @@ export default function ListDetailPage() {
                 Contact Owner
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: '#706f69' }}>
+                AI Reasoning
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium" style={{ color: '#706f69' }}>
                 Message Actions
               </th>
             </tr>
@@ -532,6 +539,25 @@ export default function ListDetailPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          handleViewReasoningClick(contact.id);
+                        }}
+                        className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
+                        style={{ color: '#1c64f2' }}
+                      >
+                        <Sparkles size={14} />
+                        View reasoning
+                      </button>
+                    ) : (
+                      <span className="text-sm" style={{ color: '#9ca3af' }}>
+                        Generate first
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {contact.hasAIMessage ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleViewMessageClick(contact.id);
                         }}
                         className="flex items-center gap-1 text-sm font-medium hover:underline"
@@ -611,7 +637,6 @@ export default function ListDetailPage() {
         onClose={() => setShowCreditConfirmation(false)}
         onConfirm={handleCreditConfirm}
         selectedContactsCount={selectedContactsForMessage.size || 1}
-        totalCredits={5}
         availableCredits={3183}
       />
 

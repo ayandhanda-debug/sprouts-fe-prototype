@@ -47,6 +47,27 @@ const offerings = [
   },
 ];
 
+const features = [
+  'Context-aware outreach generation',
+  'AI reasoning for each message',
+  'Content-aware proof point selection',
+  'Role-based personalization controls',
+];
+
+const outcomes = [
+  'Higher reply rates from targeted outreach',
+  'Lower manual prompt-editing overhead',
+  'Faster campaign launch cycles for SDR teams',
+  'More consistent messaging quality across reps',
+];
+
+const productInsights = [
+  'Product docs',
+  'Case studies',
+  'Sales decks',
+  'Website pages',
+];
+
 const testimonials = [
   {
     quote:
@@ -89,6 +110,19 @@ interface RepositoryItem {
   usedInMessages: number;
   useInContext: boolean;
 }
+
+interface PromptInsertOption {
+  token: string;
+  label: string;
+  group: 'PPFO' | 'Insights' | 'Repository';
+}
+
+const toPromptToken = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 42);
 
 const initialRepository: RepositoryItem[] = [
   {
@@ -361,6 +395,68 @@ export default function SettingsMessagingPage() {
     'Write concise, proof-backed outreach in a consultative tone. Keep the first message under 90 words, mention one relevant customer proof point, and end with a low-friction CTA.'
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showPromptInsertMenu, setShowPromptInsertMenu] = useState(false);
+  const [slashQuery, setSlashQuery] = useState('');
+  const [slashReplaceRange, setSlashReplaceRange] = useState<{ start: number; end: number } | null>(null);
+  const [activeInsertIndex, setActiveInsertIndex] = useState(0);
+
+  const promptInsertOptions: PromptInsertOption[] = [
+    { token: '/ppfo_painpoints', label: `Painpoints (${painpoints.length})`, group: 'PPFO' },
+    { token: '/ppfo_features', label: `Features (${features.length})`, group: 'PPFO' },
+    { token: '/ppfo_outcomes', label: `Outcomes (${outcomes.length})`, group: 'PPFO' },
+    ...painpoints.map((painpoint, index) => ({
+      token: `/painpoint_${index + 1}`,
+      label: painpoint.replace(' ...show more', ''),
+      group: 'PPFO' as const,
+    })),
+    ...features.map((feature) => ({
+      token: `/feature_${toPromptToken(feature)}`,
+      label: feature,
+      group: 'PPFO' as const,
+    })),
+    ...outcomes.map((outcome) => ({
+      token: `/outcome_${toPromptToken(outcome)}`,
+      label: outcome,
+      group: 'PPFO' as const,
+    })),
+    { token: '/insight_offerings', label: `Offerings (${offerings.length})`, group: 'Insights' },
+    { token: '/insight_testimonials', label: `Testimonials (${testimonials.length})`, group: 'Insights' },
+    { token: '/insight_customers', label: `Customers (${customers.length})`, group: 'Insights' },
+    { token: '/insight_product', label: `Product Insights (${productInsights.length})`, group: 'Insights' },
+    ...customers.map((customer) => ({
+      token: `/customer_${toPromptToken(customer)}`,
+      label: customer,
+      group: 'Insights' as const,
+    })),
+    ...testimonials.map((testimonial, index) => ({
+      token: `/testimonial_${index + 1}`,
+      label: `${testimonial.name} - ${testimonial.company}`,
+      group: 'Insights' as const,
+    })),
+    ...productInsights.map((insight) => ({
+      token: `/product_${toPromptToken(insight)}`,
+      label: insight,
+      group: 'Insights' as const,
+    })),
+    ...offerings.map((offering) => ({
+      token: `/offering_${toPromptToken(offering.title)}`,
+      label: offering.title,
+      group: 'Insights' as const,
+    })),
+    ...repositoryItems.map((item) => ({
+      token: `/file_${toPromptToken(item.title)}`,
+      label: item.title,
+      group: 'Repository' as const,
+    })),
+  ];
+
+  const filteredPromptInsertOptions = promptInsertOptions.filter((option) => {
+    if (!showPromptInsertMenu) return false;
+    const normalized = slashQuery.trim().toLowerCase();
+    if (!normalized) return true;
+    return option.token.toLowerCase().includes(normalized) || option.label.toLowerCase().includes(normalized);
+  });
 
   const getTodayLabel = () =>
     new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date());
@@ -368,6 +464,90 @@ export default function SettingsMessagingPage() {
   const handleQuickEnrich = () => {
     setIsQuickEnriching(true);
     setTimeout(() => setIsQuickEnriching(false), 1200);
+  };
+
+  const updatePromptSlashState = (value: string, cursorIndex: number) => {
+    const valueBeforeCursor = value.slice(0, cursorIndex);
+    const slashMatch = valueBeforeCursor.match(/(?:^|\s)\/([a-zA-Z0-9._-]*)$/);
+    if (!slashMatch) {
+      setShowPromptInsertMenu(false);
+      setSlashReplaceRange(null);
+      return;
+    }
+
+    const rawQuery = slashMatch[1] ?? '';
+    const commandStart = cursorIndex - rawQuery.length - 1;
+    setShowPromptInsertMenu(true);
+    setSlashQuery(rawQuery.toLowerCase());
+    setSlashReplaceRange({ start: commandStart, end: cursorIndex });
+    setActiveInsertIndex(0);
+  };
+
+  const handlePromptChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const nextPrompt = event.target.value;
+    const cursorIndex = event.target.selectionStart ?? nextPrompt.length;
+    setSystemPrompt(nextPrompt);
+    updatePromptSlashState(nextPrompt, cursorIndex);
+  };
+
+  const handlePromptCaretChange = (event: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const cursorIndex = event.currentTarget.selectionStart ?? event.currentTarget.value.length;
+    updatePromptSlashState(event.currentTarget.value, cursorIndex);
+  };
+
+  const appendPromptToken = (token: string) => {
+    setSystemPrompt((prev) => `${prev.trimEnd()} ${token}`.trim());
+    setShowPromptInsertMenu(false);
+    setSlashReplaceRange(null);
+    requestAnimationFrame(() => {
+      promptTextareaRef.current?.focus();
+    });
+  };
+
+  const handleInsertPromptToken = (token: string) => {
+    if (!slashReplaceRange) {
+      appendPromptToken(token);
+      return;
+    }
+    const nextPrompt = `${systemPrompt.slice(0, slashReplaceRange.start)}${token} ${systemPrompt.slice(slashReplaceRange.end)}`;
+    const nextCursorPosition = slashReplaceRange.start + token.length + 1;
+    setSystemPrompt(nextPrompt);
+    setShowPromptInsertMenu(false);
+    setSlashReplaceRange(null);
+    requestAnimationFrame(() => {
+      if (!promptTextareaRef.current) return;
+      promptTextareaRef.current.focus();
+      promptTextareaRef.current.setSelectionRange(nextCursorPosition, nextCursorPosition);
+    });
+  };
+
+  const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!showPromptInsertMenu || filteredPromptInsertOptions.length === 0) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveInsertIndex((prev) => (prev + 1) % filteredPromptInsertOptions.length);
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveInsertIndex((prev) =>
+        prev === 0 ? filteredPromptInsertOptions.length - 1 : prev - 1
+      );
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const selectedOption = filteredPromptInsertOptions[activeInsertIndex];
+      if (selectedOption) {
+        handleInsertPromptToken(selectedOption.token);
+      }
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setShowPromptInsertMenu(false);
+      setSlashReplaceRange(null);
+    }
   };
 
   const handleFilePick = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -681,24 +861,72 @@ export default function SettingsMessagingPage() {
               </span>
             </div>
 
-            <textarea
-              value={systemPrompt}
-              onChange={(event) => setSystemPrompt(event.target.value)}
-              className="mt-3 w-full rounded-lg border px-3 py-2 text-[13px] leading-snug resize-none"
-              style={{ borderColor: '#d7dce1', color: '#33424d', backgroundColor: '#fbfcfd', minHeight: '132px' }}
-              placeholder="Example: Use a warm but direct tone, reference one proof point max, avoid generic openers, and tailor CTA by role."
-            />
+            <p className="mt-2 text-[12px] leading-none" style={{ color: '#6f7c86' }}>
+              Type <span className="font-semibold">/</span> to insert PPFOs, product insights, offerings, testimonials, or repository files.
+            </p>
+            <div className="mt-2 relative">
+              <textarea
+                ref={promptTextareaRef}
+                value={systemPrompt}
+                onChange={handlePromptChange}
+                onClick={handlePromptCaretChange}
+                onKeyUp={handlePromptCaretChange}
+                onKeyDown={handlePromptKeyDown}
+                onBlur={() => {
+                  setTimeout(() => setShowPromptInsertMenu(false), 100);
+                }}
+                className="w-full rounded-lg border px-3 py-2 text-[13px] leading-snug resize-none"
+                style={{ borderColor: '#d7dce1', color: '#33424d', backgroundColor: '#fbfcfd', minHeight: '132px' }}
+                placeholder="Example: Use a warm but direct tone, reference one proof point max, avoid generic openers, and tailor CTA by role."
+              />
+              {showPromptInsertMenu && filteredPromptInsertOptions.length > 0 && (
+                <div
+                  className="absolute top-[calc(100%+6px)] left-0 right-0 rounded-xl border shadow-lg z-20 max-h-52 overflow-y-auto"
+                  style={{ borderColor: '#d7dce1', backgroundColor: '#ffffff' }}
+                >
+                  {filteredPromptInsertOptions.map((option, index) => (
+                    <button
+                      key={`${option.group}-${option.token}`}
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        handleInsertPromptToken(option.token);
+                      }}
+                      className="w-full px-3 py-2 text-left flex items-center justify-between border-b last:border-b-0"
+                      style={{
+                        borderColor: '#edf1f4',
+                        backgroundColor: activeInsertIndex === index ? '#f2f6fc' : '#ffffff',
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-semibold truncate" style={{ color: '#2f3f49' }}>
+                          {option.label}
+                        </p>
+                        <p className="text-[11px] truncate" style={{ color: '#6f7c86' }}>
+                          {option.group}
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-semibold ml-3" style={{ color: '#2563eb' }}>
+                        {option.token}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="mt-2 flex items-center justify-between">
               <div className="flex flex-wrap gap-2">
-                {['/knowledgebase', '/casestudy', '/product', '/deck'].map((cmd) => (
-                  <span
-                    key={cmd}
-                    className="h-7 px-2.5 rounded-md text-[12px] font-semibold inline-flex items-center"
-                    style={{ backgroundColor: '#e9edf2', color: '#475561' }}
+                {promptInsertOptions.slice(0, 8).map((option) => (
+                  <button
+                    key={`chip-${option.token}`}
+                    type="button"
+                    onClick={() => appendPromptToken(option.token)}
+                    className="h-7 px-2.5 rounded-md text-[12px] font-semibold inline-flex items-center border"
+                    style={{ backgroundColor: '#e9edf2', color: '#475561', borderColor: '#d7dce1' }}
                   >
-                    {cmd}
-                  </span>
+                    {option.token}
+                  </button>
                 ))}
               </div>
               <button
