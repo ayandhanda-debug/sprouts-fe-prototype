@@ -172,6 +172,14 @@ export default function AccountsPage() {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => router.push('/database-search/accounts')}
+              className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg border transition-colors hover:bg-gray-50"
+              style={{ borderColor: '#e7e7e6', color: '#191918' }}
+            >
+              <Search size={16} />
+              DB Search
+            </button>
+            <button
               onClick={() => setShowSignalsPanel(true)}
               className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg transition-colors hover:bg-gray-100"
               style={{ backgroundColor: '#f5f5f7', color: '#1d1d1f' }}

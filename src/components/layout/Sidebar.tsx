@@ -31,7 +31,7 @@ const navSections: NavSection[] = [
   {
     title: 'Qualify & Enrich',
     items: [
-      { name: 'Search', icon: <Search size={20} />, locked: true },
+      { name: 'DB Search', icon: <Search size={20} />, path: '/database-search/accounts' },
       { name: 'Target Profiles', icon: <Target size={20} />, path: '/target-profiles/accounts' },
       { name: 'Lists', icon: <List size={20} />, path: '/lists' },
     ],

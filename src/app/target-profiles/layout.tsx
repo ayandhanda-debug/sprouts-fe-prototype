@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Header from '@/components/layout/Header';
-import { Users, Building2, ChevronDown } from 'lucide-react';
+import { Users, Building2, ChevronDown, Search } from 'lucide-react';
 
 export default function TargetProfilesLayout({
   children,
@@ -49,6 +49,14 @@ export default function TargetProfilesLayout({
           >
             <Users size={16} />
             Contacts
+          </Link>
+          <Link
+            href="/database-search/accounts"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-surface-gray"
+            style={{ color: '#191918' }}
+          >
+            <Search size={16} />
+            DB Search
           </Link>
         </div>
 
