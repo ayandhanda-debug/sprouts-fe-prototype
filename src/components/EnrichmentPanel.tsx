@@ -102,11 +102,24 @@ export default function EnrichmentPanel({ isOpen, onClose, onSelectSignal }: Enr
 
   if (!isOpen) return null;
 
-  const filtered = (() => {
-    let list = activeCategory === 'all' ? allTemplates : allTemplates.filter((t) => t.catId === activeCategory);
-    if (search) list = list.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()) || t.catName.toLowerCase().includes(search.toLowerCase()));
-    return list;
-  })();
+  const activeCategoryMeta = templateCategories.find((c) => c.id === activeCategory);
+  const signalsForActiveCategory =
+    activeCategory === 'all'
+      ? allTemplates
+      : (templatesByCategory[activeCategory] || []).map((name) => ({
+          name,
+          catId: activeCategory,
+          catName: activeCategoryMeta?.name || '',
+          color: activeCategoryMeta?.color || '#6b7280',
+        }));
+
+  const filteredSignals = search
+    ? signalsForActiveCategory.filter(
+        (t) =>
+          t.name.toLowerCase().includes(search.toLowerCase()) ||
+          t.catName.toLowerCase().includes(search.toLowerCase())
+      )
+    : signalsForActiveCategory;
 
   return (
     <>
@@ -144,56 +157,89 @@ export default function EnrichmentPanel({ isOpen, onClose, onSelectSignal }: Enr
             />
           </div>
 
-          {/* Category filter tabs */}
-          <div className="flex gap-1.5 mt-3 overflow-x-auto pb-1 scrollbar-hide">
-            <button
-              onClick={() => setActiveCategory('all')}
-              className={`flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${activeCategory === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-            >
-              All
-            </button>
-            {templateCategories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${activeCategory === cat.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-              >
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: activeCategory === cat.id ? '#fff' : cat.color }} />
-                {cat.name}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Signal tiles grid */}
-        <div className="flex-1 overflow-y-auto p-5">
-          {filtered.length === 0 ? (
-            <div className="text-center py-16 text-sm text-gray-400">No signals found</div>
-          ) : (
-            <>
-              <p className="text-xs text-gray-400 mb-4">{filtered.length} signals available</p>
-              <div className="grid grid-cols-3 gap-3">
-                {filtered.map((template, idx) => (
+        {/* Categories + signals two-column layout */}
+        <div className="flex-1 overflow-hidden p-5">
+          <div className="h-full rounded-xl border border-gray-100 bg-gray-50/40 flex overflow-hidden">
+            <div className="w-[280px] bg-white border-r border-gray-100 p-4 overflow-y-auto">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Signal Categories</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setActiveCategory('all')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                    activeCategory === 'all'
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  All
+                </button>
+                {templateCategories.map((cat) => (
                   <button
-                    key={idx}
-                    onClick={() => onSelectSignal(template.name)}
-                    className="group flex flex-col items-start p-4 bg-white border border-gray-100 rounded-xl hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-md transition-all text-left"
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                      activeCategory === cat.id
+                        ? 'bg-gray-900 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
                   >
-                    {/* Category dot + name */}
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: template.color }} />
-                      <span className="text-[10px] font-medium text-gray-400 truncate">{template.catName}</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-800 leading-snug flex-1">{template.name}</p>
-                    <div className="mt-3 flex items-center gap-1 text-xs text-gray-400 group-hover:text-blue-500">
-                      <span>Add signal</span>
-                      <ChevronRight size={12} />
-                    </div>
+                    <div
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: activeCategory === cat.id ? '#fff' : cat.color }}
+                    />
+                    {cat.name}
                   </button>
                 ))}
               </div>
-            </>
-          )}
+            </div>
+
+            <div className="flex-1 p-4 overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {activeCategory === 'all' ? 'All Signals' : activeCategoryMeta?.name}
+                  </h3>
+                  {activeCategory !== 'all' && (
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: activeCategoryMeta?.color || '#6b7280' }}
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">{filteredSignals.length} signals</p>
+              </div>
+
+              {filteredSignals.length === 0 ? (
+                <div className="text-center py-16 text-sm text-gray-400">No signals found</div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredSignals.map((template, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => onSelectSignal(template.name)}
+                      className="w-full group flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl hover:border-blue-200 hover:bg-blue-50/30 transition-all text-left"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: template.color }} />
+                          <span className="text-[10px] font-medium text-gray-400 truncate">{template.catName}</span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-800 leading-snug">
+                          {template.name}
+                        </p>
+                      </div>
+                      <div className="ml-3 flex items-center gap-1 text-xs text-gray-400 group-hover:text-blue-500 flex-shrink-0">
+                        <span>Add</span>
+                        <ChevronRight size={12} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </>
