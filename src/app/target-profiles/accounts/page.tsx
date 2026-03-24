@@ -20,6 +20,11 @@ import {
   Zap,
   Info,
   ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  TrendingUp,
+  TrendingDown,
+  Activity,
 } from 'lucide-react';
 import SignalsPanel from '@/components/SignalsPanel';
 import EnrichmentPanel from '@/components/EnrichmentPanel';
@@ -34,6 +39,11 @@ interface TrendEvent {
   delta: number;
   category: EventCategory;
   explainability: string;
+}
+
+interface TrendSignalCard {
+  title: string;
+  summary: string;
 }
 
 interface TrendHistoryPoint {
@@ -71,6 +81,29 @@ const filterCategories = [
   { name: 'Revenue', icon: <DollarSign size={16} /> },
   { name: 'Funding', icon: <DollarSign size={16} /> },
   { name: 'Owner', icon: <Users size={16} /> },
+];
+
+const enrichableSignalCards: TrendSignalCard[] = [
+  {
+    title: 'AI Adoption',
+    summary:
+      'Active investments in AI workflows with launches tied to practical customer use-cases and operational efficiency.',
+  },
+  {
+    title: 'Competitor Analysis',
+    summary:
+      'Competitive pressure is rising with stronger positioning from adjacent platform vendors and newer category players.',
+  },
+  {
+    title: 'Customer Success Stories',
+    summary:
+      'Recent proof points indicate expanding customer wins and stronger reference stories across priority segments.',
+  },
+  {
+    title: 'Notable Customers and Partners',
+    summary:
+      'Partnership mentions and customer logos suggest stronger enterprise acceptance over the recent quarter.',
+  },
 ];
 
 const buildHistory = (base: number): TrendHistoryPoint[] => [
@@ -153,7 +186,7 @@ const mockAccounts: Account[] = [
     logo: 'SY',
     trendScore: 26,
     trendDirection: 'cooling',
-    trendLabel: 'Moderate Trend',
+    trendLabel: 'Moderate Momentum',
     lastUpdated: '17 Mar, 2026',
     keyInsights: ['Score remained stable with no significant changes.'],
     timelineEvents: buildEvents('Syniverse'),
@@ -171,7 +204,7 @@ const mockAccounts: Account[] = [
     logo: 'NS',
     trendScore: 18,
     trendDirection: 'stable',
-    trendLabel: 'Low Trend',
+    trendLabel: 'Low Momentum',
     lastUpdated: '16 Mar, 2026',
     keyInsights: ['Signal strength is low and needs additional trigger events.'],
     timelineEvents: buildEvents('netshoes'),
@@ -189,7 +222,7 @@ const mockAccounts: Account[] = [
     logo: 'SP',
     trendScore: 31,
     trendDirection: 'heating',
-    trendLabel: 'Moderate Trend',
+    trendLabel: 'Moderate Momentum',
     lastUpdated: '15 Mar, 2026',
     keyInsights: ['Buying intent signals are increasing across two monitored topics.'],
     timelineEvents: buildEvents('Sailpoint'),
@@ -207,7 +240,7 @@ const mockAccounts: Account[] = [
     logo: 'AC',
     trendScore: 44,
     trendDirection: 'heating',
-    trendLabel: 'High Trend',
+    trendLabel: 'High Momentum',
     lastUpdated: '14 Mar, 2026',
     keyInsights: ['Recent account activity aligns strongly with your active outreach themes.'],
     timelineEvents: buildEvents('ACV'),
@@ -225,7 +258,7 @@ const mockAccounts: Account[] = [
     logo: 'UN',
     trendScore: 53,
     trendDirection: 'heating',
-    trendLabel: 'High Trend',
+    trendLabel: 'High Momentum',
     lastUpdated: '14 Mar, 2026',
     keyInsights: ['Signals indicate active evaluation windows in the current quarter.'],
     timelineEvents: buildEvents('Uniphore'),
@@ -243,7 +276,7 @@ const mockAccounts: Account[] = [
     logo: 'AP',
     trendScore: 25,
     trendDirection: 'heating',
-    trendLabel: 'Low Trend',
+    trendLabel: 'Low Momentum',
     lastUpdated: '12 Mar, 2026',
     keyInsights: [
       'The team is actively researching AI with direct signals for adoption and competitor analysis.',
@@ -264,7 +297,7 @@ const mockAccounts: Account[] = [
     logo: 'AV',
     trendScore: 23,
     trendDirection: 'cooling',
-    trendLabel: 'Low Trend',
+    trendLabel: 'Low Momentum',
     lastUpdated: '13 Mar, 2026',
     keyInsights: ['Momentum cooled after a short spike in competitor-related signals.'],
     timelineEvents: buildEvents('Avalara'),
@@ -282,7 +315,7 @@ const mockAccounts: Account[] = [
     logo: 'CK',
     trendScore: 28,
     trendDirection: 'heating',
-    trendLabel: 'Moderate Trend',
+    trendLabel: 'Moderate Momentum',
     lastUpdated: '13 Mar, 2026',
     keyInsights: ['Moderate trend with gradual positive movement from new event signals.'],
     timelineEvents: buildEvents('Ciklum'),
@@ -300,7 +333,7 @@ const mockAccounts: Account[] = [
     logo: 'SV',
     trendScore: 30,
     trendDirection: 'heating',
-    trendLabel: 'Moderate Trend',
+    trendLabel: 'Moderate Momentum',
     lastUpdated: '12 Mar, 2026',
     keyInsights: ['Signals indicate consistent trend momentum from multiple functional teams.'],
     timelineEvents: buildEvents('Sovos'),
@@ -318,7 +351,7 @@ const mockAccounts: Account[] = [
     logo: 'DL',
     trendScore: 21,
     trendDirection: 'stable',
-    trendLabel: 'Low Trend',
+    trendLabel: 'Low Momentum',
     lastUpdated: '12 Mar, 2026',
     keyInsights: ['No major trigger events detected in the most recent period.'],
     timelineEvents: buildEvents('Deltek'),
@@ -331,6 +364,34 @@ const directionStyles: Record<TrendDirection, { label: string; color: string }> 
   cooling: { label: 'Cooling', color: '#2563eb' },
   heating: { label: 'Heating', color: '#f97316' },
   stable: { label: 'Stable', color: '#6b7280' },
+};
+
+const trendIconStyles: Record<TrendDirection, { bg: string; border: string; icon: React.ReactNode }> = {
+  heating: {
+    bg: '#fff7ed',
+    border: '#fed7aa',
+    icon: <TrendingUp size={13} style={{ color: '#f97316' }} />,
+  },
+  cooling: {
+    bg: '#eff6ff',
+    border: '#bfdbfe',
+    icon: <TrendingDown size={13} style={{ color: '#2563eb' }} />,
+  },
+  stable: {
+    bg: '#f3f4f6',
+    border: '#d1d5db',
+    icon: <Activity size={13} style={{ color: '#6b7280' }} />,
+  },
+};
+
+const getDirectionMarkerIcon = (direction: TrendDirection) => {
+  if (direction === 'heating') {
+    return <ArrowUpRight size={13} style={{ color: directionStyles[direction].color }} />;
+  }
+  if (direction === 'cooling') {
+    return <ArrowDownRight size={13} style={{ color: directionStyles[direction].color }} />;
+  }
+  return <Minus size={13} style={{ color: directionStyles[direction].color }} />;
 };
 
 const trendNarrative: Record<TrendDirection, string> = {
@@ -381,7 +442,6 @@ export default function AccountsPage() {
   const [signalInitialTemplate, setSignalInitialTemplate] = useState<string | undefined>(undefined);
   const [openTrendPopoverFor, setOpenTrendPopoverFor] = useState<number | null>(null);
   const [selectedTrendAccount, setSelectedTrendAccount] = useState<Account | null>(null);
-  const [trendDetailsTab, setTrendDetailsTab] = useState<'timeline' | 'website'>('timeline');
   const [collapsedEventGroups, setCollapsedEventGroups] = useState<Record<string, boolean>>({});
   const [expandedEventRows, setExpandedEventRows] = useState<Set<string>>(new Set());
 
@@ -399,7 +459,6 @@ export default function AccountsPage() {
 
   const openTrendDetails = (account: Account) => {
     setOpenTrendPopoverFor(null);
-    setTrendDetailsTab('timeline');
     setCollapsedEventGroups({});
     setExpandedEventRows(new Set());
     setSelectedTrendAccount(account);
@@ -409,10 +468,16 @@ export default function AccountsPage() {
     setSelectedTrendAccount(null);
   };
 
-  const trendDetailsRows =
-    trendDetailsTab === 'timeline'
-      ? selectedTrendAccount?.timelineEvents ?? []
-      : selectedTrendAccount?.websiteVisits ?? [];
+  const openSignalEnrichment = (signalName: string) => {
+    closeTrendDetails();
+    setSignalInitialTemplate(signalName);
+    setShowSignalsPanel(true);
+  };
+
+  const trendDetailsRows = [
+    ...(selectedTrendAccount?.timelineEvents ?? []),
+    ...(selectedTrendAccount?.websiteVisits ?? []),
+  ];
 
   const groupedTrendRows = useMemo(() => {
     const groups: Record<EventCategory, TrendEvent[]> = {
@@ -680,13 +745,21 @@ export default function AccountsPage() {
                         onClick={() =>
                           setOpenTrendPopoverFor((current) => (current === account.id ? null : account.id))
                         }
-                        className="inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-sm"
+                        className="inline-flex items-center gap-2 rounded-lg border px-2 py-1.5 text-sm"
                         style={{ borderColor: '#e7e7e6', backgroundColor: '#ffffff' }}
                       >
-                        <span className="font-medium" style={{ color: '#111928' }}>
+                        <span
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md border"
+                          style={{
+                            backgroundColor: trendIconStyles[account.trendDirection].bg,
+                            borderColor: trendIconStyles[account.trendDirection].border,
+                          }}
+                        >
+                          {trendIconStyles[account.trendDirection].icon}
+                        </span>
+                        <span className="text-sm font-semibold" style={{ color: '#111928' }}>
                           {account.trendScore}
                         </span>
-                        <ArrowUpRight size={14} style={{ color: directionStyles[account.trendDirection].color }} />
                       </button>
 
                       {openTrendPopoverFor === account.id && (
@@ -705,13 +778,13 @@ export default function AccountsPage() {
                           </p>
 
                           <p className="text-sm mt-2" style={{ color: '#111928' }}>
-                            Trend:{' '}
+                            Trend Score:{' '}
                             <span
                               className="font-semibold inline-flex items-center gap-1"
                               style={{ color: directionStyles[account.trendDirection].color }}
                             >
                               {directionStyles[account.trendDirection].label}
-                              <ArrowUpRight size={13} />
+                              {getDirectionMarkerIcon(account.trendDirection)}
                             </span>
                           </p>
 
@@ -852,13 +925,13 @@ export default function AccountsPage() {
 
               <div className="mt-5 border-t pt-4" style={{ borderColor: '#e7e7e6' }}>
                 <p className="text-xl" style={{ color: '#111928' }}>
-                  Trend:{' '}
+                  Trend Score:{' '}
                   <span
                     className="font-semibold inline-flex items-center gap-1"
                     style={{ color: directionStyles[selectedTrendAccount.trendDirection].color }}
                   >
                     {directionStyles[selectedTrendAccount.trendDirection].label}
-                    <ArrowUpRight size={16} />
+                    {getDirectionMarkerIcon(selectedTrendAccount.trendDirection)}
                   </span>
                 </p>
                 <p className="text-sm mt-2" style={{ color: '#6b7280' }}>
@@ -881,8 +954,8 @@ export default function AccountsPage() {
 
               <div className="mt-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[28px] font-semibold" style={{ color: '#111928' }}>
-                    Trend Score Trend
+                  <h3 className="text-2xl font-semibold" style={{ color: '#111928' }}>
+                    Trend Score Over Time
                   </h3>
                   <select
                     className="rounded-lg border px-3 py-1.5 text-sm"
@@ -895,8 +968,8 @@ export default function AccountsPage() {
                   </select>
                 </div>
 
-                <div className="mt-3 rounded-lg border p-3" style={{ borderColor: '#e7e7e6' }}>
-                  <div className="relative h-56">
+                <div className="mt-3 rounded-lg border p-2.5" style={{ borderColor: '#e7e7e6' }}>
+                  <div className="relative h-44">
                     <div className="absolute inset-0">
                       {[0, 25, 50, 75, 100].map((label) => (
                         <div
@@ -919,7 +992,7 @@ export default function AccountsPage() {
                       />
                     </svg>
                   </div>
-                  <div className="mt-2 grid grid-cols-7 text-xs" style={{ color: '#6b7280' }}>
+                  <div className="mt-2 grid grid-cols-7 text-[11px]" style={{ color: '#6b7280' }}>
                     {selectedTrendAccount.history.map((point) => (
                       <span key={point.date} className="text-center">
                         {point.date}
@@ -930,40 +1003,7 @@ export default function AccountsPage() {
               </div>
 
               <div className="mt-5">
-                <div className="inline-flex items-center rounded-lg border p-1" style={{ borderColor: '#e5e7eb' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTrendDetailsTab('timeline');
-                      setCollapsedEventGroups({});
-                      setExpandedEventRows(new Set());
-                    }}
-                    className="px-4 py-1.5 text-sm font-medium rounded-md"
-                    style={{
-                      color: trendDetailsTab === 'timeline' ? '#111928' : '#6b7280',
-                      backgroundColor: trendDetailsTab === 'timeline' ? '#f3f4f6' : 'transparent',
-                    }}
-                  >
-                    Timeline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTrendDetailsTab('website');
-                      setCollapsedEventGroups({});
-                      setExpandedEventRows(new Set());
-                    }}
-                    className="px-4 py-1.5 text-sm font-medium rounded-md"
-                    style={{
-                      color: trendDetailsTab === 'website' ? '#111928' : '#6b7280',
-                      backgroundColor: trendDetailsTab === 'website' ? '#f3f4f6' : 'transparent',
-                    }}
-                  >
-                    Website Visits
-                  </button>
-                </div>
-
-                <h4 className="text-xl font-semibold mt-3" style={{ color: '#111928' }}>
+                <h4 className="text-xl font-semibold" style={{ color: '#111928' }}>
                   Timeline of Events
                 </h4>
                 <div className="mt-2 space-y-3">
@@ -980,7 +1020,7 @@ export default function AccountsPage() {
                           >
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold" style={{ color: '#111928' }}>
-                                {groupName}
+                                {groupName === 'Website' ? 'Website Visitors' : groupName}
                               </span>
                               <span
                                 className="px-2 py-0.5 rounded-full text-xs font-medium"
@@ -1071,6 +1111,38 @@ export default function AccountsPage() {
                         </div>
                       );
                     })}
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xl font-semibold" style={{ color: '#111928' }}>
+                    Signals
+                  </h4>
+                  <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ color: '#4b5563', backgroundColor: '#f3f4f6' }}>
+                    Enrichable
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {enrichableSignalCards.map((signal) => (
+                    <div key={signal.title} className="rounded-xl border p-3" style={{ borderColor: '#e7e7e6' }}>
+                      <p className="text-sm font-semibold" style={{ color: '#111928' }}>
+                        {signal.title}
+                      </p>
+                      <p className="text-sm mt-1 line-clamp-3" style={{ color: '#374151' }}>
+                        {signal.summary}
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-3 inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium hover:bg-gray-50"
+                        style={{ borderColor: '#d1d5db', color: '#111928' }}
+                        onClick={() => openSignalEnrichment(signal.title)}
+                      >
+                        <Sparkles size={12} />
+                        Enrich
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
