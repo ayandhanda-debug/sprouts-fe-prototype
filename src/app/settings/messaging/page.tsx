@@ -5,6 +5,7 @@ import {
   Box,
   CheckCircle2,
   Database,
+  Eye,
   FileText,
   Globe,
   Link2,
@@ -117,6 +118,32 @@ interface PromptInsertOption {
   group: 'PPFO' | 'Insights' | 'Repository';
 }
 
+type GraphEntityType =
+  | 'PROCESS'
+  | 'PRODUCT'
+  | 'PAIN_POINT'
+  | 'METRIC'
+  | 'FEATURE'
+  | 'OUTCOME'
+  | 'ORGANIZATION'
+  | 'INTEGRATION';
+
+interface GraphEntityNode {
+  id: string;
+  name: string;
+  type: GraphEntityType;
+  description: string;
+  mentionCount: number;
+  confidence: number;
+}
+
+interface ContextBlock {
+  title: string;
+  kind: 'Insight' | 'Painpoint';
+  context: string;
+  evidence: string[];
+}
+
 const toPromptToken = (value: string) =>
   value
     .toLowerCase()
@@ -194,6 +221,110 @@ const statusMeta: Record<RepositoryStatus, { label: string; bg: string; color: s
   partial: { label: 'Partial', bg: '#e0e7ff', color: '#4338ca' },
   disabled: { label: 'Disabled', bg: '#e5e7eb', color: '#4b5563' },
 };
+
+const graphEntityTypeLabel: Record<GraphEntityType, string> = {
+  PROCESS: 'Process',
+  PRODUCT: 'Product',
+  PAIN_POINT: 'Pain point',
+  METRIC: 'Metric',
+  FEATURE: 'Feature',
+  OUTCOME: 'Outcome',
+  ORGANIZATION: 'Organization',
+  INTEGRATION: 'Integration',
+};
+
+const sampleGraphEntities: GraphEntityNode[] = [
+  {
+    id: '1d407be1-b290-4781-9371-3439a2359f58',
+    name: 'Waterfall Project Management',
+    type: 'PROCESS',
+    description:
+      'Sequential project methodology with phases, milestones and long-range planning.',
+    mentionCount: 2,
+    confidence: 0.91,
+  },
+  {
+    id: 'dd50a494-48f2-469c-9b39-dd7fc80d1647',
+    name: 'MindStaq Platform',
+    type: 'PRODUCT',
+    description:
+      'Unified work management platform consolidating tools into a single operating interface.',
+    mentionCount: 2,
+    confidence: 0.95,
+  },
+  {
+    id: '09d74e80-c374-498e-a5e9-8ff40dbf8e04',
+    name: 'Technology Bloat Problem',
+    type: 'PAIN_POINT',
+    description:
+      'Tool overlap and poor integration creates silos, slows decisions, and wastes team time.',
+    mentionCount: 2,
+    confidence: 0.93,
+  },
+  {
+    id: '426f3738-8965-4d2c-8558-02583d10251e',
+    name: 'Digital Transformation Failure Rate',
+    type: 'METRIC',
+    description:
+      '70% of transformation efforts fail despite high annual spend across enterprises.',
+    mentionCount: 1,
+    confidence: 0.88,
+  },
+  {
+    id: 'cdb1a2d9-7ddf-49b4-82a5-ed0eae2b629c',
+    name: 'Unified Work Dashboard',
+    type: 'FEATURE',
+    description:
+      'Single-pane visibility for task status, workload, dependencies and performance.',
+    mentionCount: 1,
+    confidence: 0.9,
+  },
+  {
+    id: 'c4b70aaa-70ea-48b3-8c2a-1c636de0d076',
+    name: 'Execution Speed Improvement',
+    type: 'OUTCOME',
+    description:
+      'Case study indicates faster execution cycles through centralized work coordination.',
+    mentionCount: 1,
+    confidence: 0.9,
+  },
+  {
+    id: 'cc408f6d-e519-4cc7-bffb-8389409233c5',
+    name: 'Financial Institution Case Study',
+    type: 'ORGANIZATION',
+    description:
+      'Reference customer showing faster execution and fewer manual status operations.',
+    mentionCount: 1,
+    confidence: 0.85,
+  },
+  {
+    id: 'a748d423-9d10-4516-93ce-7d04ea8c0448',
+    name: 'Jira Integration',
+    type: 'INTEGRATION',
+    description:
+      'Agile tracker integration noted as part of fragmented tooling workflows.',
+    mentionCount: 1,
+    confidence: 0.86,
+  },
+];
+
+const sampleContextBlocks: ContextBlock[] = [
+  {
+    title: '50% Faster Execution and Zero Manual Reports',
+    kind: 'Insight',
+    context:
+      'MindStaq identifies heavy app switching and manual reporting overhead, then consolidates operations into a unified source of truth with real-time visibility.',
+    evidence: ['https://www.mindstaq.com/'],
+  },
+  {
+    title:
+      "Too many tools overlap, don't integrate, and add complexity instead of clarity",
+    kind: 'Painpoint',
+    context:
+      'Enterprises using 1,000+ apps with low integration are forced into fragmented workflows that waste time and erode decision quality.',
+    evidence: ['https://www.mindstaq.com/'],
+  },
+];
 
 function CheckboxRow({
   title,
@@ -385,6 +516,7 @@ export default function SettingsMessagingPage() {
   const [mode, setMode] = useState<SettingsMode>('standard');
   const [repositoryItems, setRepositoryItems] = useState<RepositoryItem[]>(initialRepository);
   const [openMenuRowId, setOpenMenuRowId] = useState<string | null>(null);
+  const [viewRepositoryRowId, setViewRepositoryRowId] = useState<string | null>(null);
   const [configWebsiteUrl, setConfigWebsiteUrl] = useState('sprouts.ai/dashboard');
   const [isQuickEnriching, setIsQuickEnriching] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -400,6 +532,28 @@ export default function SettingsMessagingPage() {
   const [slashQuery, setSlashQuery] = useState('');
   const [slashReplaceRange, setSlashReplaceRange] = useState<{ start: number; end: number } | null>(null);
   const [activeInsertIndex, setActiveInsertIndex] = useState(0);
+  const viewRepositoryItem =
+    repositoryItems.find((item) => item.id === viewRepositoryRowId) ?? null;
+  const extractedEntities =
+    viewRepositoryItem?.source === 'Website'
+      ? sampleGraphEntities.filter((entity) => entity.type !== 'INTEGRATION')
+      : sampleGraphEntities;
+  const entityTypeCounts = extractedEntities.reduce<Record<GraphEntityType, number>>(
+    (acc, entity) => {
+      acc[entity.type] = (acc[entity.type] ?? 0) + 1;
+      return acc;
+    },
+    {
+      PROCESS: 0,
+      PRODUCT: 0,
+      PAIN_POINT: 0,
+      METRIC: 0,
+      FEATURE: 0,
+      OUTCOME: 0,
+      ORGANIZATION: 0,
+      INTEGRATION: 0,
+    }
+  );
 
   const promptInsertOptions: PromptInsertOption[] = [
     { token: '/ppfo_painpoints', label: `Painpoints (${painpoints.length})`, group: 'PPFO' },
@@ -614,13 +768,21 @@ export default function SettingsMessagingPage() {
   };
 
   const handleRepositoryAction = (
-    action: 're-crawl' | 'delete',
+    action: 'view' | 're-crawl' | 'delete',
     rowId: string
   ) => {
     setOpenMenuRowId(null);
 
+    if (action === 'view') {
+      setViewRepositoryRowId(rowId);
+      return;
+    }
+
     if (action === 'delete') {
       setRepositoryItems((prev) => prev.filter((item) => item.id !== rowId));
+      if (viewRepositoryRowId === rowId) {
+        setViewRepositoryRowId(null);
+      }
       return;
     }
 
@@ -826,6 +988,7 @@ export default function SettingsMessagingPage() {
                             className="absolute right-3 top-12 z-10 w-44 rounded-xl border shadow-md p-1.5"
                             style={{ borderColor: '#dce0e4', backgroundColor: '#ffffff' }}
                           >
+                            <ActionButton label="View" icon={<Eye size={15} />} onClick={() => handleRepositoryAction('view', item.id)} />
                             <ActionButton label="Re-crawl" icon={<RefreshCcw size={15} />} onClick={() => handleRepositoryAction('re-crawl', item.id)} />
                             <ActionButton
                               label="Delete"
@@ -939,6 +1102,164 @@ export default function SettingsMessagingPage() {
               </button>
             </div>
           </section>
+        </div>
+      )}
+
+      {viewRepositoryItem && (
+        <div
+          className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4"
+          onClick={() => setViewRepositoryRowId(null)}
+        >
+          <div
+            className="w-full max-w-[920px] rounded-2xl border shadow-xl p-4 max-h-[84vh] overflow-y-auto"
+            style={{ borderColor: '#dce0e4', backgroundColor: '#f8f9fb' }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[24px] leading-none font-semibold" style={{ color: '#1f2f3a' }}>
+                  Extracted Entities Preview
+                </h3>
+                <p className="mt-1 text-[13px]" style={{ color: '#6f7c86' }}>
+                  {viewRepositoryItem.title} · {viewRepositoryItem.source}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewRepositoryRowId(null)}
+                className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-[#eceff3]"
+              >
+                <X size={20} style={{ color: '#6f7c86' }} />
+              </button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-[1.55fr_1fr] gap-3">
+              <section className="rounded-xl border bg-white p-3" style={{ borderColor: '#dce0e4' }}>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <h4 className="text-[16px] font-semibold" style={{ color: '#2f3f49' }}>
+                    Key Entities ({extractedEntities.length})
+                  </h4>
+                  <span
+                    className="h-7 px-2.5 rounded-full text-[12px] font-semibold inline-flex items-center"
+                    style={{ backgroundColor: '#eef2ff', color: '#4338ca' }}
+                  >
+                    Graph API
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                  {extractedEntities.map((entity) => (
+                    <div
+                      key={entity.id}
+                      className="rounded-lg border p-2.5"
+                      style={{ borderColor: '#e3e7eb', backgroundColor: '#fbfcfd' }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[14px] font-semibold" style={{ color: '#263640' }}>
+                          {entity.name}
+                        </p>
+                        <span
+                          className="h-6 px-2 rounded-md text-[11px] font-semibold inline-flex items-center"
+                          style={{ backgroundColor: '#edf2f7', color: '#4f5f6b' }}
+                        >
+                          {graphEntityTypeLabel[entity.type]}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[12px] leading-snug" style={{ color: '#677581' }}>
+                        {entity.description}
+                      </p>
+                      <div className="mt-1.5 flex items-center gap-3 text-[11px] font-semibold" style={{ color: '#63717d' }}>
+                        <span>Mentions: {entity.mentionCount}</span>
+                        <span>Confidence: {(entity.confidence * 100).toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-xl border bg-white p-3" style={{ borderColor: '#dce0e4' }}>
+                <h4 className="text-[16px] font-semibold mb-2" style={{ color: '#2f3f49' }}>
+                  Extraction Summary
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(graphEntityTypeLabel) as GraphEntityType[]).map((type) =>
+                    entityTypeCounts[type] > 0 ? (
+                      <div
+                        key={type}
+                        className="rounded-lg border px-2.5 py-2"
+                        style={{ borderColor: '#e3e7eb', backgroundColor: '#f9fafb' }}
+                      >
+                        <p className="text-[11px] font-semibold" style={{ color: '#6c7882' }}>
+                          {graphEntityTypeLabel[type]}
+                        </p>
+                        <p className="text-[18px] font-semibold leading-none mt-1" style={{ color: '#2a3d48' }}>
+                          {entityTypeCounts[type]}
+                        </p>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+
+                <div className="mt-3 rounded-lg border p-2.5" style={{ borderColor: '#e3e7eb', backgroundColor: '#f9fafb' }}>
+                  <p className="text-[12px] font-semibold" style={{ color: '#53616c' }}>
+                    Metadata
+                  </p>
+                  <p className="mt-1 text-[12px]" style={{ color: '#6f7c86' }}>
+                    Entities found: 20
+                  </p>
+                  <p className="text-[12px]" style={{ color: '#6f7c86' }}>
+                    Chunks analyzed: 19
+                  </p>
+                  <p className="text-[12px]" style={{ color: '#6f7c86' }}>
+                    Query time: 6507 ms
+                  </p>
+                </div>
+              </section>
+            </div>
+
+            <section className="mt-3 rounded-xl border bg-white p-3" style={{ borderColor: '#dce0e4' }}>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h4 className="text-[16px] font-semibold" style={{ color: '#2f3f49' }}>
+                  Retrieval Context
+                </h4>
+                <span
+                  className="h-7 px-2.5 rounded-full text-[12px] font-semibold inline-flex items-center"
+                  style={{ backgroundColor: '#ecfeff', color: '#0f766e' }}
+                >
+                  Context API
+                </span>
+              </div>
+              <div className="space-y-2">
+                {sampleContextBlocks.map((block) => (
+                  <div
+                    key={`${block.kind}-${block.title}`}
+                    className="rounded-lg border p-2.5"
+                    style={{ borderColor: '#e3e7eb', backgroundColor: '#fbfcfd' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-5 px-2 rounded-md text-[10px] font-semibold inline-flex items-center"
+                        style={{
+                          backgroundColor: block.kind === 'Insight' ? '#dcfce7' : '#fee2e2',
+                          color: block.kind === 'Insight' ? '#166534' : '#991b1b',
+                        }}
+                      >
+                        {block.kind}
+                      </span>
+                      <p className="text-[13px] font-semibold truncate" style={{ color: '#2f3f49' }}>
+                        {block.title}
+                      </p>
+                    </div>
+                    <p className="mt-1.5 text-[12px] leading-snug" style={{ color: '#677581' }}>
+                      {block.context}
+                    </p>
+                    <p className="mt-1 text-[11px]" style={{ color: '#5d6a75' }}>
+                      Evidence: {block.evidence.join(', ')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
         </div>
       )}
 
