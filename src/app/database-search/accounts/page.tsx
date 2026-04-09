@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { addSavedIcp } from '@/lib/icp-storage';
 import {
   Search,
   Filter,
@@ -68,6 +69,22 @@ const filterSections = [
   { id: 'sicCode', label: 'Industry SIC Code', icon: Factory, section: 'ACCOUNT' },
   { id: 'naicsCode', label: 'Industry NAICS Code', icon: Factory, section: 'ACCOUNT' },
 ];
+
+const filterValueExamples: Record<string, string[]> = {
+  icp: ['High fit', 'Medium fit'],
+  company: ['B2B product companies'],
+  location: ['India', 'United States'],
+  industry: ['Software', 'Financial Services'],
+  companyKeyword: ['AI', 'Automation'],
+  employeeByDept: ['Engineering 50+', 'Sales 20+'],
+  employeeCount: ['1,001 - 5,000'],
+  revenue: ['$10M - $500M'],
+  technology: ['Salesforce', 'HubSpot'],
+  funding: ['Series B+', 'Last 24 months'],
+  foundedYear: ['2012 - 2024'],
+  sicCode: ['7372'],
+  naicsCode: ['511210', '541511'],
+};
 
 // AI Discovery signals (when user HAS signals configured)
 const discoverySignals = [
@@ -150,6 +167,9 @@ export default function DatabaseSearchAccountsPage() {
   const [maxICPAccounts] = useState(150); // Sprouts recommended ICP ceiling per signal
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [showSaveIcpModal, setShowSaveIcpModal] = useState(false);
+  const [newIcpName, setNewIcpName] = useState('');
+  const [saveIcpError, setSaveIcpError] = useState('');
 
   // ICP Segmentation State
   const [icpSegments, setIcpSegments] = useState({
@@ -168,6 +188,51 @@ export default function DatabaseSearchAccountsPage() {
   const [customCredits, setCustomCredits] = useState(10000);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  const appliedSignalLabels = selectedSignals
+    .map((signalId) => recommendedSignals.find((signal) => signal.id === signalId)?.name)
+    .filter((value): value is string => Boolean(value));
+
+  const appliedAttributeSelections = expandedFilters
+    .map((filterId) => {
+      const filter = filterSections.find((item) => item.id === filterId);
+      const values = filterValueExamples[filterId];
+      if (!filter || !values || values.length === 0) return null;
+      return {
+        attribute: filter.label,
+        value: values.join(', '),
+      };
+    })
+    .filter(
+      (
+        item
+      ): item is {
+        attribute: string;
+        value: string;
+      } => Boolean(item)
+    );
+
+  if (searchQuery.trim()) {
+    appliedAttributeSelections.unshift({
+      attribute: 'Company Search',
+      value: searchQuery.trim(),
+    });
+  }
+  if (appliedSignalLabels.length > 0) {
+    appliedAttributeSelections.push({
+      attribute: 'Signals',
+      value: appliedSignalLabels.join(', '),
+    });
+  }
+
+  const appliedFilterLabels = filterSections
+    .filter((filter) => expandedFilters.includes(filter.id))
+    .map((filter) => filter.label);
+
+  const canSaveIcp =
+    appliedFilterLabels.length > 0 ||
+    appliedSignalLabels.length > 0 ||
+    searchQuery.trim().length > 0;
 
   // Dynamic credit calculation with tiered pricing (game theory: anchoring + bulk discount)
   const calculateCredits = (count: number) => {
@@ -236,6 +301,55 @@ export default function DatabaseSearchAccountsPage() {
     setSelectedAccounts(prev =>
       prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
     );
+  };
+
+  const openSaveIcpModal = () => {
+    const defaultName = `Custom ICP ${new Date().toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })}`;
+    setNewIcpName(defaultName);
+    setSaveIcpError('');
+    setShowSaveIcpModal(true);
+  };
+
+  const handleSaveIcp = () => {
+    const icpName = newIcpName.trim();
+    if (!icpName) {
+      setSaveIcpError('ICP name is required.');
+      return;
+    }
+    if (!canSaveIcp) {
+      setSaveIcpError('Apply at least one filter or search query before saving.');
+      return;
+    }
+
+    const filterPayload = Array.from(
+      new Set([
+        ...appliedFilterLabels,
+        ...(searchQuery.trim() ? [`Company search: ${searchQuery.trim()}`] : []),
+      ])
+    );
+
+    addSavedIcp({
+      id: `icp-${Date.now()}`,
+      name: icpName,
+      source: 'db-search',
+      createdAt: new Date().toISOString(),
+      companyQuery: searchQuery.trim(),
+      filters: filterPayload,
+      signals: appliedSignalLabels,
+      attributeSelections: appliedAttributeSelections.map(
+        (item) => `${item.attribute}: ${item.value}`
+      ),
+    });
+
+    setShowSaveIcpModal(false);
+    setNewIcpName('');
+    setSaveIcpError('');
+    setNotificationMessage(`Saved "${icpName}" to Set-up ICPs.`);
+    setShowNotification(true);
+    setTimeout(() => setShowNotification(false), 3000);
   };
 
   const handleAIDiscover = () => {
@@ -495,16 +609,27 @@ export default function DatabaseSearchAccountsPage() {
             </div>
 
             {/* Bottom Actions - Fixed */}
-            <div className="absolute bottom-0 left-0 w-72 bg-white border-t px-4 py-3 flex items-center gap-3" style={{ borderColor: '#e7e7e6' }}>
+            <div
+              className="absolute bottom-0 left-0 w-72 bg-white border-t px-4 py-3 flex items-center justify-between gap-2"
+              style={{ borderColor: '#e7e7e6' }}
+            >
               <button
-                className="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer"
-                style={{ borderColor: '#e7e7e6', color: '#464544' }}
+                className="h-9 px-2 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                style={{ color: '#464544' }}
               >
                 Clear
               </button>
               <button
-                className="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer"
-                style={{ borderColor: '#e7e7e6', color: '#464544' }}
+                type="button"
+                onClick={openSaveIcpModal}
+                className="h-9 px-2 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                style={{ color: '#464544' }}
+              >
+                Save ICP
+              </button>
+              <button
+                className="h-9 px-3 text-sm font-semibold rounded-lg text-white hover:brightness-105 transition-all cursor-pointer"
+                style={{ backgroundColor: '#1c64f2' }}
               >
                 Save Search
               </button>
@@ -524,6 +649,7 @@ export default function DatabaseSearchAccountsPage() {
               <Filter size={14} />
               {showFilters ? 'Hide Filters' : 'Show Filters'}
             </button>
+
             <div className="flex-1 relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#706f69' }} />
               <input
@@ -684,6 +810,133 @@ export default function DatabaseSearchAccountsPage() {
           </div>
         </div>
       </div>
+
+      {/* Save ICP Modal */}
+      {showSaveIcpModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            onClick={() => {
+              setShowSaveIcpModal(false);
+              setSaveIcpError('');
+            }}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="w-full max-w-[560px] rounded-2xl border bg-white shadow-xl"
+              style={{ borderColor: '#dbe1e6' }}
+            >
+              <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: '#e7e7e6' }}>
+                <div>
+                  <h3 className="text-[20px] font-semibold" style={{ color: '#1f2f3a' }}>
+                    Save as Custom ICP
+                  </h3>
+                  <p className="text-[13px] mt-1" style={{ color: '#6f7b86' }}>
+                    Save current DB Search filters to Settings → Set-up ICPs.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSaveIcpModal(false);
+                    setSaveIcpError('');
+                  }}
+                  className="h-8 w-8 rounded-lg inline-flex items-center justify-center hover:bg-[#f3f5f7]"
+                >
+                  <X size={16} style={{ color: '#6f7b86' }} />
+                </button>
+              </div>
+
+              <div className="px-5 py-4 space-y-4">
+                <div>
+                  <label
+                    htmlFor="custom-icp-name"
+                    className="text-[12px] font-semibold uppercase tracking-wide"
+                    style={{ color: '#66737f' }}
+                  >
+                    ICP Name
+                  </label>
+                  <input
+                    id="custom-icp-name"
+                    value={newIcpName}
+                    onChange={(event) => setNewIcpName(event.target.value)}
+                    className="mt-1 w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                    style={{ borderColor: '#dbe1e6', color: '#1f2f3a' }}
+                    placeholder="e.g. India Mid-Market Logistics ICP"
+                  />
+                </div>
+
+                <div className="rounded-lg border p-3" style={{ borderColor: '#e7e7e6', backgroundColor: '#f8fafb' }}>
+                  <p className="text-[12px] font-semibold mb-2" style={{ color: '#5f6d79' }}>
+                    ICP Attributes
+                  </p>
+                  <p className="text-[11px] mb-2" style={{ color: '#7a8792' }}>
+                    Selected values that will be saved under this custom ICP type.
+                  </p>
+                  <div className="space-y-1.5">
+                    {appliedAttributeSelections.map((item) => (
+                      <div
+                        key={`${item.attribute}-${item.value}`}
+                        className="rounded-md border px-2.5 py-2 bg-white flex items-start justify-between gap-2"
+                        style={{ borderColor: '#e3e8ed' }}
+                      >
+                        <span className="text-[11px] font-semibold" style={{ color: '#3d4f61' }}>
+                          {item.attribute}
+                        </span>
+                        <span className="text-[11px] text-right" style={{ color: '#55687a' }}>
+                          {item.value}
+                        </span>
+                      </div>
+                    ))}
+                    {!canSaveIcp && (
+                      <span className="text-[12px]" style={{ color: '#9aa3ad' }}>
+                        No attributes selected yet.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {saveIcpError && (
+                  <p className="text-[12px] font-medium" style={{ color: '#dc2626' }}>
+                    {saveIcpError}
+                  </p>
+                )}
+              </div>
+
+              <div className="px-5 py-4 border-t flex items-center justify-between" style={{ borderColor: '#e7e7e6' }}>
+                <Link
+                  href="/settings/setup-icps"
+                  className="text-[13px] font-medium underline"
+                  style={{ color: '#2563eb' }}
+                >
+                  Open Set-up ICPs
+                </Link>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSaveIcpModal(false);
+                      setSaveIcpError('');
+                    }}
+                    className="h-9 px-3 rounded-lg border text-sm font-medium"
+                    style={{ borderColor: '#dbe1e6', color: '#4b5a67' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveIcp}
+                    className="h-9 px-3 rounded-lg text-sm font-semibold text-white"
+                    style={{ backgroundColor: '#1c64f2' }}
+                  >
+                    Save ICP
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* AI Discovery Modal */}
       {showAIModal && (
