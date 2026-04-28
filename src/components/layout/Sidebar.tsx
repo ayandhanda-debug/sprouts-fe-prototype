@@ -45,7 +45,7 @@ const navSections: NavSection[] = [
   {
     title: 'Track and Monitor',
     items: [
-      { name: 'Website Visits', icon: <Globe size={20} />, locked: true },
+      { name: 'Website Visits', icon: <Globe size={20} />, path: '/website-visits' },
       { name: 'Notifications', icon: <Bell size={20} />, locked: true },
       { name: 'Settings', icon: <Settings size={20} />, path: '/settings/account' },
     ],

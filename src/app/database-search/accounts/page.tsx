@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { addSavedIcp } from '@/lib/icp-storage';
 import {
@@ -189,50 +189,56 @@ export default function DatabaseSearchAccountsPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
-  const appliedSignalLabels = selectedSignals
-    .map((signalId) => recommendedSignals.find((signal) => signal.id === signalId)?.name)
-    .filter((value): value is string => Boolean(value));
+  const appliedSignalLabels = useMemo(
+    () =>
+      selectedSignals
+        .map((signalId) => recommendedSignals.find((signal) => signal.id === signalId)?.name)
+        .filter((value): value is string => Boolean(value)),
+    [selectedSignals]
+  );
 
-  const appliedAttributeSelections = expandedFilters
-    .map((filterId) => {
-      const filter = filterSections.find((item) => item.id === filterId);
-      const values = filterValueExamples[filterId];
-      if (!filter || !values || values.length === 0) return null;
-      return {
-        attribute: filter.label,
-        value: values.join(', '),
-      };
-    })
-    .filter(
-      (
-        item
-      ): item is {
-        attribute: string;
-        value: string;
-      } => Boolean(item)
-    );
+  const appliedAttributeSelections = useMemo(() => {
+    const selections = expandedFilters
+      .map((filterId) => {
+        const filter = filterSections.find((item) => item.id === filterId);
+        const values = filterValueExamples[filterId];
+        if (!filter || !values || values.length === 0) return null;
+        return {
+          attribute: filter.label,
+          values,
+        };
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          attribute: string;
+          values: string[];
+        } => Boolean(item)
+      );
 
-  if (searchQuery.trim()) {
-    appliedAttributeSelections.unshift({
-      attribute: 'Company Search',
-      value: searchQuery.trim(),
-    });
-  }
-  if (appliedSignalLabels.length > 0) {
-    appliedAttributeSelections.push({
-      attribute: 'Signals',
-      value: appliedSignalLabels.join(', '),
-    });
-  }
+    if (searchQuery.trim()) {
+      selections.unshift({
+        attribute: 'Company Search',
+        values: [searchQuery.trim()],
+      });
+    }
+
+    if (appliedSignalLabels.length > 0) {
+      selections.push({
+        attribute: 'Signals',
+        values: appliedSignalLabels,
+      });
+    }
+
+    return selections;
+  }, [expandedFilters, searchQuery, appliedSignalLabels]);
 
   const appliedFilterLabels = filterSections
     .filter((filter) => expandedFilters.includes(filter.id))
     .map((filter) => filter.label);
 
-  const canSaveIcp =
-    appliedFilterLabels.length > 0 ||
-    appliedSignalLabels.length > 0 ||
-    searchQuery.trim().length > 0;
+  const canSaveIcp = appliedAttributeSelections.length > 0;
 
   // Dynamic credit calculation with tiered pricing (game theory: anchoring + bulk discount)
   const calculateCredits = (count: number) => {
@@ -340,7 +346,7 @@ export default function DatabaseSearchAccountsPage() {
       filters: filterPayload,
       signals: appliedSignalLabels,
       attributeSelections: appliedAttributeSelections.map(
-        (item) => `${item.attribute}: ${item.value}`
+        (item) => `${item.attribute}: ${item.values.join(', ')}`
       ),
     });
 
@@ -867,25 +873,40 @@ export default function DatabaseSearchAccountsPage() {
                 </div>
 
                 <div className="rounded-lg border p-3" style={{ borderColor: '#e7e7e6', backgroundColor: '#f8fafb' }}>
-                  <p className="text-[12px] font-semibold mb-2" style={{ color: '#5f6d79' }}>
+                  <p className="text-[12px] font-semibold" style={{ color: '#5f6d79' }}>
                     ICP Attributes
                   </p>
-                  <p className="text-[11px] mb-2" style={{ color: '#7a8792' }}>
+                  <p className="text-[11px] mt-1" style={{ color: '#7a8792' }}>
                     Selected values that will be saved under this custom ICP type.
                   </p>
-                  <div className="space-y-1.5">
+                  <div
+                    className="mt-2 rounded-md border px-2.5 py-2 text-[11px] font-medium"
+                    style={{ borderColor: '#dbe5f2', backgroundColor: '#edf4ff', color: '#37516b' }}
+                  >
+                    Scoring set: all selected filters are combined for custom ICP fitment.
+                  </div>
+
+                  <div className="space-y-2 mt-2 max-h-[220px] overflow-y-auto pr-0.5">
                     {appliedAttributeSelections.map((item) => (
                       <div
-                        key={`${item.attribute}-${item.value}`}
-                        className="rounded-md border px-2.5 py-2 bg-white flex items-start justify-between gap-2"
+                        key={`${item.attribute}-${item.values.join('|')}`}
+                        className="rounded-md border px-2.5 py-2 bg-white"
                         style={{ borderColor: '#e3e8ed' }}
                       >
-                        <span className="text-[11px] font-semibold" style={{ color: '#3d4f61' }}>
+                        <p className="text-[11px] font-semibold" style={{ color: '#3d4f61' }}>
                           {item.attribute}
-                        </span>
-                        <span className="text-[11px] text-right" style={{ color: '#55687a' }}>
-                          {item.value}
-                        </span>
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {item.values.map((value) => (
+                            <span
+                              key={`${item.attribute}-${value}`}
+                              className="px-2 py-1 rounded-md text-[10px] font-medium"
+                              style={{ backgroundColor: '#edf3fb', color: '#3c556c' }}
+                            >
+                              {value}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     ))}
                     {!canSaveIcp && (
