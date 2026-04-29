@@ -48,6 +48,107 @@ const offerings = [
   },
 ];
 
+const recommendedSignals = [
+  {
+    category: 'problem_based',
+    signal_name: 'Release Testing Delays',
+    signal:
+      'Does [company] report slow releases due to testing bottlenecks or QA constraints?',
+    relevance: 'high',
+  },
+  {
+    category: 'problem_based',
+    signal_name: 'Late Performance Issues',
+    signal:
+      'Has [company] experienced production outages or latency issues tied to application performance?',
+    relevance: 'high',
+  },
+  {
+    category: 'problem_based',
+    signal_name: 'Manual Invoice Processing',
+    signal:
+      'Does [company] mention manual invoice processing or accounts payable inefficiencies?',
+    relevance: 'high',
+  },
+  {
+    category: 'technology',
+    signal_name: 'Legacy Modernization Need',
+    signal:
+      'Is [company] still running legacy applications, monoliths, or outdated enterprise platforms?',
+    relevance: 'high',
+  },
+  {
+    category: 'technology',
+    signal_name: 'Weak Security Posture',
+    signal:
+      'Does [company] lack visible application security testing, red teaming, or managed monitoring?',
+    relevance: 'high',
+  },
+  {
+    category: 'technology',
+    signal_name: 'DataStax Stack Usage',
+    signal:
+      'Is [company] using DataStax, Cassandra, or real-time streaming architectures at scale?',
+    relevance: 'medium',
+  },
+  {
+    category: 'hiring',
+    signal_name: 'QA Automation Hiring',
+    signal:
+      'Is [company] hiring QA automation, SDET, or quality engineering leaders?',
+    relevance: 'high',
+  },
+  {
+    category: 'hiring',
+    signal_name: 'Cloud Modernization Hiring',
+    signal:
+      'Is [company] hiring cloud architects, platform engineers, or microservices developers?',
+    relevance: 'high',
+  },
+  {
+    category: 'hiring',
+    signal_name: 'Cybersecurity Hiring Surge',
+    signal:
+      'Is [company] hiring application security, penetration testing, or SOC roles?',
+    relevance: 'medium',
+  },
+  {
+    category: 'strategic',
+    signal_name: 'Digital Product Expansion',
+    signal:
+      'Is [company] launching new digital products requiring faster, safer software delivery?',
+    relevance: 'high',
+  },
+  {
+    category: 'strategic',
+    signal_name: 'Banking Personalization Push',
+    signal:
+      'Is [company] a bank investing in customer analytics or next-best-action initiatives?',
+    relevance: 'high',
+  },
+  {
+    category: 'strategic',
+    signal_name: 'Healthcare Engagement Initiative',
+    signal:
+      'Is [company] expanding patient engagement, remote monitoring, or digital health programs?',
+    relevance: 'medium',
+  },
+  {
+    category: 'funding',
+    signal_name: 'Growth Stage Investment',
+    signal:
+      'Has [company] recently raised growth funding for product scaling or digital transformation?',
+    relevance: 'medium',
+  },
+  {
+    category: 'competitive',
+    signal_name: 'Legacy Testing Vendor',
+    signal:
+      'Is [company] using legacy testing vendors or manual-heavy QA service providers?',
+    relevance: 'high',
+  },
+];
+
 const features = [
   'Context-aware outreach generation',
   'AI reasoning for each message',
@@ -353,6 +454,48 @@ function CheckboxRow({
 }
 
 function StandardConfiguration() {
+  const [selectedRecommendedSignalNames, setSelectedRecommendedSignalNames] = useState<string[]>(
+    []
+  );
+  const [isRunningSignalsOnTal, setIsRunningSignalsOnTal] = useState(false);
+  const [runSignalStatus, setRunSignalStatus] = useState('');
+
+  const allRecommendedSignalsSelected =
+    recommendedSignals.length > 0 &&
+    selectedRecommendedSignalNames.length === recommendedSignals.length;
+
+  const toggleRecommendedSignal = (signalName: string) => {
+    setSelectedRecommendedSignalNames((current) =>
+      current.includes(signalName)
+        ? current.filter((name) => name !== signalName)
+        : [...current, signalName]
+    );
+  };
+
+  const toggleAllRecommendedSignals = () => {
+    setSelectedRecommendedSignalNames((current) =>
+      current.length === recommendedSignals.length
+        ? []
+        : recommendedSignals.map((item) => item.signal_name)
+    );
+  };
+
+  const handleRunSignalsOnTal = () => {
+    if (selectedRecommendedSignalNames.length === 0) {
+      setRunSignalStatus('Select at least one recommended signal to run on TAL.');
+      return;
+    }
+
+    setIsRunningSignalsOnTal(true);
+    setRunSignalStatus('');
+    setTimeout(() => {
+      setIsRunningSignalsOnTal(false);
+      setRunSignalStatus(
+        `Queued ${selectedRecommendedSignalNames.length} signal(s) to run on TAL from ai-hpm-dev.`
+      );
+    }, 1000);
+  };
+
   return (
     <div className="grid grid-cols-[1.65fr_1fr] gap-3">
       <div className="space-y-3">
@@ -452,7 +595,7 @@ function StandardConfiguration() {
               Active Customers 25/25
             </h3>
           </div>
-          <div className="p-3 space-y-2 max-h-[420px] overflow-y-auto">
+          <div className="p-3 space-y-2 max-h-[360px] overflow-y-auto pr-1">
             <label className="h-8 px-1 inline-flex items-center gap-2 text-[14px] leading-none font-medium" style={{ color: '#3d4a54' }}>
               <input type="checkbox" className="w-4 h-4" />
               Select All
@@ -481,7 +624,7 @@ function StandardConfiguration() {
             </h3>
           </div>
 
-          <div className="p-3 space-y-2 max-h-[420px] overflow-y-auto">
+          <div className="p-3 space-y-2">
             <label className="h-8 px-1 inline-flex items-center gap-2 text-[14px] leading-none font-medium" style={{ color: '#3d4a54' }}>
               <input type="checkbox" className="w-4 h-4" />
               Select All
@@ -505,6 +648,104 @@ function StandardConfiguration() {
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="rounded-xl border bg-[#f4f6f7]" style={{ borderColor: '#dce0e4' }}>
+          <div className="h-14 px-4 border-b flex items-center justify-between gap-2" style={{ borderColor: '#dce0e4' }}>
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} style={{ color: '#50606b' }} />
+              <h3 className="text-[18px] leading-none font-semibold" style={{ color: '#313f49' }}>
+                Recommended Signals
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={handleRunSignalsOnTal}
+              disabled={isRunningSignalsOnTal || selectedRecommendedSignalNames.length === 0}
+              className="h-8 px-3 rounded-lg text-[13px] font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#2467f4' }}
+            >
+              {isRunningSignalsOnTal
+                ? 'Running...'
+                : `Run on TAL${selectedRecommendedSignalNames.length > 0 ? ` (${selectedRecommendedSignalNames.length})` : ''}`}
+            </button>
+          </div>
+
+          <div className="p-3 space-y-2 max-h-[380px] overflow-y-auto pr-1">
+            <div className="flex items-center justify-between">
+              <label
+                className="h-8 px-1 inline-flex items-center gap-2 text-[14px] leading-none font-medium"
+                style={{ color: '#3d4a54' }}
+              >
+                <input
+                  type="checkbox"
+                  className="w-4 h-4"
+                  checked={allRecommendedSignalsSelected}
+                  onChange={toggleAllRecommendedSignals}
+                />
+                Select All
+              </label>
+              <span
+                className="px-2 py-1 rounded-md text-[11px] font-semibold border"
+                style={{ borderColor: '#d6dde3', color: '#5b6872', backgroundColor: '#eef2f6' }}
+              >
+                ai-hpm-dev
+              </span>
+            </div>
+
+            <p className="text-[12px] px-1" style={{ color: '#6f7c86' }}>
+              Showing 3 of {recommendedSignals.length} recommended signals
+            </p>
+
+            {recommendedSignals.map((signalItem) => {
+              const isChecked = selectedRecommendedSignalNames.includes(signalItem.signal_name);
+              return (
+                <div
+                  key={signalItem.signal_name}
+                  className="rounded-xl border px-3 py-3"
+                  style={{
+                    borderColor: isChecked ? '#bfd4ff' : '#dce0e4',
+                    backgroundColor: isChecked ? '#eef4ff' : '#f7f8f9',
+                  }}
+                >
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 w-4 h-4"
+                      checked={isChecked}
+                      onChange={() => toggleRecommendedSignal(signalItem.signal_name)}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="text-[15px] leading-none font-semibold" style={{ color: '#44515b' }}>
+                          {signalItem.signal_name}
+                        </p>
+                        <span
+                          className="px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase"
+                          style={{
+                            backgroundColor:
+                              signalItem.relevance === 'high' ? '#dbeafe' : '#ede9fe',
+                            color: signalItem.relevance === 'high' ? '#1d4ed8' : '#5b21b6',
+                          }}
+                        >
+                          {signalItem.relevance}
+                        </span>
+                      </div>
+                      <p className="text-[13px] leading-[1.25]" style={{ color: '#73808a' }}>
+                        {signalItem.signal}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {runSignalStatus && (
+              <p className="text-[12px] leading-none px-1 pt-1" style={{ color: '#5f6f7a' }}>
+                {runSignalStatus}
+              </p>
+            )}
           </div>
         </section>
       </div>
